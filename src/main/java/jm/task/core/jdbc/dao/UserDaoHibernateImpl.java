@@ -4,14 +4,18 @@ import jm.task.core.jdbc.model.User;
 import jm.task.core.jdbc.util.Util;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import java.util.logging.Logger;
 
 import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 import java.sql.ResultSet;
 import java.util.List;
 
 import static jm.task.core.jdbc.util.Util.getSessionFactory;
 
 public class UserDaoHibernateImpl implements UserDao {
+    private final Logger logger = Logger.getLogger(UserDaoHibernateImpl.class.getName());
+
     public UserDaoHibernateImpl() {
 
     }
@@ -55,6 +59,7 @@ public class UserDaoHibernateImpl implements UserDao {
             session.save(us1);
             // commit transaction
             transaction.commit();
+            logger.info("Пользователь с именем - " + name + " добавлен в базу данных");
         } catch (Exception e) {
             if (transaction != null) {
                 transaction.rollback();
@@ -69,10 +74,8 @@ public class UserDaoHibernateImpl implements UserDao {
         try (Session session = Util.getSessionFactory().openSession()) {
             transaction = session.beginTransaction();
 
-            // Создаем HQL запрос на удаление
-            session.createQuery("delete from User where id = :id")
-                    .setParameter("id", id)
-                    .executeUpdate();
+            User user = session.get(User.class, id);
+            session.remove(user);
 
             transaction.commit();
         } catch (Exception e) {
@@ -83,12 +86,11 @@ public class UserDaoHibernateImpl implements UserDao {
 
     @Override
     public List<User> getAllUsers() {
-        Session session = getSessionFactory().openSession();
-        Transaction transaction = session.beginTransaction();
-        String sql = "FROM User";
-        List<User> listUser= session.createQuery(sql).list();
-        session.close();
-        return listUser;
+        Session session = Util.getSessionFactory().openSession();
+        TypedQuery<User> query = session.createQuery("from User", User.class);
+        List<User> userList = query.getResultList();
+
+        return userList;
     }
 
     @Override
